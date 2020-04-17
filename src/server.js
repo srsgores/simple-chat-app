@@ -3,29 +3,24 @@ import socketIO, {Server as SocketIOServer} from "socket.io";
 import {createServer, Server as HTTPServer} from "http";
 import path from "path";
 
-export class Server {
-	private httpServer: HTTPServer;
-	private app: Application;
-	private io: SocketIOServer;
+export default class Server {
+	httpServer = HTTPServer;
+	app = Application;
+	io = SocketIOServer;
 
-	private activeSockets: string[] = [];
-
-	private readonly DEFAULT_PORT = 5000;
-
-	constructor()
-	{
+	activeSockets = [];
+	DEFAULT_PORT = 5000;
+	constructor() {
 		this.initialize();
 	}
 
-	public listen(callback: (port: number) => void): void
-	{
+	listen(callback) {
 		this.httpServer.listen(this.DEFAULT_PORT, () => {
 			callback(this.DEFAULT_PORT);
 		});
 	}
 
-	private initialize(): void
-	{
+	initialize() {
 		this.app = express();
 		this.httpServer = createServer(this.app);
 		this.io = socketIO(this.httpServer);
@@ -35,27 +30,23 @@ export class Server {
 		this.handleSocketConnection();
 	}
 
-	private configureApp(): void
-	{
+	configureApp() {
 		this.app.use(express.static(path.join(__dirname, "../public")));
 	}
 
-	private configureRoutes(): void
-	{
+	configureRoutes() {
 		this.app.get("/", (req, res) => {
 			res.sendFile("index.html");
 		});
 	}
 
-	private handleSocketConnection(): void
-	{
+	handleSocketConnection() {
 		this.io.on("connection", socket => {
 			const existingSocket = this.activeSockets.find(
 				existingSocket => existingSocket === socket.id
 			);
 
-			if (!existingSocket)
-			{
+			if (!existingSocket) {
 				this.activeSockets.push(socket.id);
 
 				socket.emit("update-user-list", {
@@ -69,7 +60,7 @@ export class Server {
 				});
 			}
 
-			socket.on("call-user", (data: any) => {
+			socket.on("call-user", data => {
 				socket.to(data.to).emit("call-made", {
 					offer: data.offer,
 					socket: socket.id
@@ -90,9 +81,7 @@ export class Server {
 			});
 
 			socket.on("disconnect", () => {
-				this.activeSockets = this.activeSockets.filter(
-					existingSocket => existingSocket !== socket.id
-				);
+				this.activeSockets = this.activeSockets.filter(existingSocket => existingSocket !== socket.id);
 				socket.broadcast.emit("remove-user", {
 					socketId: socket.id
 				});
